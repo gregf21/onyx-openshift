@@ -8,7 +8,8 @@ USER root
 
 RUN mkdir -p /opt/vespa/var /opt/vespa/logs /opt/vespa/tmp \
  && chgrp -R 0 /opt/vespa/var /opt/vespa/logs /opt/vespa/tmp \
- && chmod -R g+rwX /opt/vespa/var /opt/vespa/logs /opt/vespa/tmp
+ && chmod -R g+rwX /opt/vespa/var /opt/vespa/logs /opt/vespa/tmp \
+ && chmod g+w /etc/passwd
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

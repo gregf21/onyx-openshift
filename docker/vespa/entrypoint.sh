@@ -1,15 +1,21 @@
 #!/bin/bash
 set -e
 
+# OpenShift assigns a random UID with GID 0. Register it in /etc/passwd
+# so Vespa's scripts can resolve the username and skip setuid/setgid calls.
+if ! whoami &> /dev/null; then
+    echo "vespa:x:$(id -u):0:Vespa:${VESPA_HOME:-/opt/vespa}:/bin/bash" >> /etc/passwd
+fi
+
+export VESPA_HOME=/opt/vespa
+export VESPA_USER=vespa
+
 # Ensure mounted volumes are writable (PVCs may be owned by root initially)
 for dir in /opt/vespa/var /opt/vespa/logs /opt/vespa/tmp; do
     if [ ! -w "$dir" ]; then
         echo "WARNING: $dir is not writable by UID $(id -u), attempting to continue..."
     fi
 done
-
-export VESPA_HOME=/opt/vespa
-export VESPA_USER=$(whoami)
 
 # Start config server
 $VESPA_HOME/bin/vespa-start-configserver
