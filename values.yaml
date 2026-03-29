@@ -96,11 +96,12 @@ vespa:
       memory: 16Gi
 
 # =============================================================================
-# Inference Model Server — NLP tasks (reranking, intent classification)
-# Always deployed (needed for both lite and full modes).
+# Inference Model Server — Local NLP tasks (reranking, intent classification)
+# Only needed if you want to run embedding/reranking models locally.
+# Set replicaCount: 0 if using a remote inference provider.
 # =============================================================================
 inferenceModel:
-  replicaCount: 1
+  replicaCount: 0
   image:
     repository: onyxdotapp/onyx-model-server
     tag: ""  # defaults to global.version

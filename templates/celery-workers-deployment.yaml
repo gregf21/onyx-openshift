@@ -98,5 +98,11 @@ spec:
                 - /app/onyx/main.py
           resources:
             {{- toYaml .resources | nindent 12 }}
+          volumeMounts:
+            - name: onyx-logs
+              mountPath: /var/log/onyx
+      volumes:
+        - name: onyx-logs
+          emptyDir: {}
 {{- end }}
 {{- end }}
