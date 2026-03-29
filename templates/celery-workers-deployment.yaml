@@ -36,6 +36,7 @@ spec:
           securityContext:
             {{- include "onyx.containerSecurityContext" $root | nindent 12 }}
           command:
+            - /usr/local/bin/entrypoint.sh
             - sh
             - -c
             - |
@@ -51,6 +52,7 @@ spec:
           securityContext:
             {{- include "onyx.containerSecurityContext" $root | nindent 12 }}
           command:
+            - /usr/local/bin/entrypoint.sh
             - celery
             - -A
             - onyx.background.celery.versioned_apps.{{ .app }}:app

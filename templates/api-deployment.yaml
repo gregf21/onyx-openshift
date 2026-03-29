@@ -33,6 +33,7 @@ spec:
           securityContext:
             {{- include "onyx.containerSecurityContext" . | nindent 12 }}
           command:
+            - /usr/local/bin/entrypoint.sh
             - /bin/sh
             - -c
             - |
