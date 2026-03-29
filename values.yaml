@@ -101,7 +101,7 @@ vespa:
 # Set replicaCount: 0 if using a remote inference provider.
 # =============================================================================
 inferenceModel:
-  replicaCount: 0
+  replicaCount: 1
   image:
     repository: onyxdotapp/onyx-model-server
     tag: ""  # defaults to global.version

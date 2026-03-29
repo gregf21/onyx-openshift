@@ -50,4 +50,10 @@ spec:
             {{- include "onyx.backendEnv" . | nindent 12 }}
           resources:
             {{- toYaml .Values.inferenceModel.resources | nindent 12 }}
+          volumeMounts:
+            - name: onyx-logs
+              mountPath: /var/log/onyx
+      volumes:
+        - name: onyx-logs
+          emptyDir: {}
 {{- end }}
