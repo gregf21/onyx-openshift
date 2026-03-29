@@ -7,6 +7,7 @@ metadata:
 data:
   INTERNAL_URL: "http://{{ include "onyx.fullname" . }}-api:{{ .Values.api.service.port }}"
   POSTGRES_HOST: "{{ include "onyx.fullname" . }}-postgresql"
+  ENABLE_OPENSEARCH_INDEXING_FOR_ONYX: "false"
   {{- if .Values.vectorDB.enabled }}
   DISABLE_VECTOR_DB: "false"
   VESPA_HOST: "{{ include "onyx.fullname" . }}-vespa-0.{{ include "onyx.fullname" . }}-vespa.{{ .Release.Namespace }}.svc.cluster.local"
