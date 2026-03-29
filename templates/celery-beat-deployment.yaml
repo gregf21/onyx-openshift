@@ -36,7 +36,7 @@ spec:
           command:
             - celery
             - -A
-            - onyx.background.celery.versioned_apps.beat
+            - onyx.background.celery.versioned_apps.beat:app
             - beat
             - --loglevel={{ .Values.celery.beat.logLevel }}
             - --schedule=/tmp/celerybeat-schedule

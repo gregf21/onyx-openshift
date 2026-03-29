@@ -39,7 +39,7 @@ spec:
           command:
             - celery
             - -A
-            - onyx.background.celery.versioned_apps.{{ .app }}
+            - onyx.background.celery.versioned_apps.{{ .app }}:app
             - worker
             {{- if .pool }}
             - --pool={{ .pool }}
