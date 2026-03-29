@@ -39,6 +39,7 @@ spec:
             - onyx.background.celery.versioned_apps.beat
             - beat
             - --loglevel={{ .Values.celery.beat.logLevel }}
+            - --schedule=/tmp/celerybeat-schedule
           envFrom:
             - configMapRef:
                 name: {{ include "onyx.fullname" . }}-env
