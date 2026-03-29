@@ -17,7 +17,7 @@
 
 global:
   # Image tag for all Onyx components (api, webserver, model-server, backend)
-  version: "latest"
+  version: "v3.1.0"
   pullPolicy: "IfNotPresent"
 
 imagePullSecrets: []
