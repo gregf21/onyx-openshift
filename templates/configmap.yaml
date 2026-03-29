@@ -10,6 +10,7 @@ data:
   ENABLE_OPENSEARCH_INDEXING_FOR_ONYX: "false"
   HF_HUB_OFFLINE: "1"
   TRANSFORMERS_OFFLINE: "1"
+  FILE_STORE_BACKEND: "postgres"
   {{- if .Values.vectorDB.enabled }}
   DISABLE_VECTOR_DB: "false"
   VESPA_HOST: "{{ include "onyx.fullname" . }}-vespa-0.{{ include "onyx.fullname" . }}-vespa.{{ .Release.Namespace }}.svc.cluster.local"
@@ -21,7 +22,6 @@ data:
   MODEL_SERVER_HOST: ""
   CACHE_BACKEND: "postgres"
   AUTH_BACKEND: "postgres"
-  FILE_STORE_BACKEND: "postgres"
   {{- end }}
   {{- range $key, $value := .Values.config }}
   {{- if not (empty $value) }}
