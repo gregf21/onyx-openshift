@@ -41,8 +41,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "onyx.redisSecretName" . }}
                   key: REDIS_PASSWORD
-          args:
-            - /opt/bitnami/scripts/redis/run.sh
+          command:
+            - redis-server
+            - --requirepass
+            - $(REDIS_PASSWORD)
             - --appendonly
             - "no"
             - --save
