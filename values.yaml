@@ -141,8 +141,8 @@ indexingModel:
 api:
   replicaCount: 1
   image:
-    repository: onyxdotapp/onyx-backend
-    tag: ""
+    repository: onyx-backend-openshift
+    tag: "v3.1.0"
   containerPort: 8080
   service:
     type: ClusterIP
@@ -214,8 +214,8 @@ nginx:
 # =============================================================================
 celery:
   image:
-    repository: onyxdotapp/onyx-backend
-    tag: ""  # defaults to global.version
+    repository: onyx-backend-openshift
+    tag: "v3.1.0"
 
   beat:
     logLevel: INFO
