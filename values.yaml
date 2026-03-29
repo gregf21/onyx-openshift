@@ -202,17 +202,6 @@ nginx:
     read: 300
 
 # =============================================================================
-# OpenShift Route (optional)
-# =============================================================================
-route:
-  enabled: false
-  host: ""
-  tls:
-    enabled: true
-    termination: edge
-    insecureEdgeTerminationPolicy: Redirect
-
-# =============================================================================
 # Celery Beat + Workers (only when vectorDB.enabled)
 #
 # The workers list drives a single consolidated template. Each entry becomes

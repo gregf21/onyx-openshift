@@ -42,10 +42,9 @@ Components deployed:
   - Nginx reverse proxy (Deployment)
 {{- end }}
 
-Access Onyx:
-{{- if .Values.route.enabled }}
-  Route: https://{{ .Values.route.host | default (printf "%s-%s.apps.<cluster>" (include "onyx.fullname" .) .Release.Namespace) }}
-{{- else }}
-  Port-forward:  kubectl port-forward svc/{{ include "onyx.fullname" . }}-nginx {{ .Values.nginx.service.port }}:{{ .Values.nginx.service.port }} -n {{ .Release.Namespace }}
-  Then open:     http://localhost:{{ .Values.nginx.service.port }}
-{{- end }}
+Access Onyx (port-forward for testing):
+  kubectl port-forward svc/{{ include "onyx.fullname" . }}-nginx {{ .Values.nginx.service.port }}:{{ .Values.nginx.service.port }} -n {{ .Release.Namespace }}
+  Then open: http://localhost:{{ .Values.nginx.service.port }}
+
+  For external access, ask your cluster admin to create a Route pointing
+  to the {{ include "onyx.fullname" . }}-nginx service on port {{ .Values.nginx.service.port }}.

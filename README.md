@@ -47,14 +47,12 @@ Deploys 4 pods: PostgreSQL, API server, web server, and nginx.
 ```bash
 # Full mode
 helm install onyx ./onyx-openshift \
-  --set route.enabled=true \
   --set auth.postgresql.password=<secure-password> \
   --set auth.redis.password=<secure-password>
 
 # Lite mode
 helm install onyx ./onyx-openshift \
   --set vectorDB.enabled=false \
-  --set route.enabled=true \
   --set auth.postgresql.password=<secure-password>
 ```
 
@@ -79,10 +77,6 @@ kubectl delete pod -l app.kubernetes.io/component=vespa -n <your-namespace>
 ## Architecture
 
 ```
-                    +---------+
-                    |  Route  |  (optional OpenShift Route)
-                    +----+----+
-                         |
                     +----+----+
                     |  Nginx  |  reverse proxy (port 8080)
                     +----+----+
@@ -143,8 +137,6 @@ In lite mode, only the PostgreSQL, API, Web, and Nginx components are deployed.
 |-----------|-------------|---------|
 | `global.version` | Image tag for Onyx components | `latest` |
 | `vectorDB.enabled` | Enable full mode with RAG | `true` |
-| `route.enabled` | Create an OpenShift Route | `false` |
-| `route.host` | Route hostname (empty = auto-generated) | `""` |
 | `auth.postgresql.password` | PostgreSQL password | `postgres` |
 | `auth.postgresql.existingSecret` | Use an existing Secret for PostgreSQL credentials | `""` |
 | `auth.redis.password` | Redis password | `password` |
@@ -199,15 +191,9 @@ Workers are defined as a list in `celery.workers`. To adjust resources for a spe
 
 ## Accessing Onyx
 
-**With an OpenShift Route:**
+The nginx Service exposes Onyx within the cluster. Your cluster admin can create a Route or other ingress to expose it externally.
 
-```bash
-helm install onyx ./onyx-openshift \
-  --set route.enabled=true \
-  --set route.host=onyx.apps.mycluster.example.com
-```
-
-**With port-forwarding:**
+**With port-forwarding (for testing):**
 
 ```bash
 kubectl port-forward svc/<release>-onyx-openshift-nginx 8080:80 -n <namespace>
