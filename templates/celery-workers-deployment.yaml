@@ -30,6 +30,20 @@ spec:
       {{- end }}
       securityContext:
         {{- include "onyx.podSecurityContext" $root | nindent 8 }}
+      initContainers:
+        - name: wait-for-api
+          image: "{{ $root.Values.celery.image.repository }}:{{ $root.Values.celery.image.tag | default $root.Values.global.version }}"
+          securityContext:
+            {{- include "onyx.containerSecurityContext" $root | nindent 12 }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for API server..."
+              until curl -sf http://{{ include "onyx.fullname" $root }}-api:{{ $root.Values.api.service.port }}/health > /dev/null 2>&1; do
+                sleep 5
+              done
+              echo "API server ready."
       containers:
         - name: celery-{{ .name }}
           image: "{{ $root.Values.celery.image.repository }}:{{ $root.Values.celery.image.tag | default $root.Values.global.version }}"
