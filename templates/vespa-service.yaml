@@ -1,0 +1,28 @@
+{{- if .Values.vectorDB.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "onyx.fullname" . }}-vespa
+  labels:
+    {{- include "onyx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vespa
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: config
+      port: 19071
+      targetPort: config
+      protocol: TCP
+    - name: query
+      port: 8080
+      targetPort: query
+      protocol: TCP
+    - name: feed
+      port: 8081
+      targetPort: feed
+      protocol: TCP
+  selector:
+    {{- include "onyx.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: vespa
+{{- end }}

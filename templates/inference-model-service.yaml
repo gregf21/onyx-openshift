@@ -1,0 +1,19 @@
+{{- if gt (int .Values.inferenceModel.replicaCount) 0 }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "onyx.fullname" . }}-inference-model
+  labels:
+    {{- include "onyx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: inference-model
+spec:
+  type: {{ .Values.inferenceModel.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.inferenceModel.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "onyx.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: inference-model
+{{- end }}

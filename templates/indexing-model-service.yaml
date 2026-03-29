@@ -1,0 +1,19 @@
+{{- if and .Values.vectorDB.enabled (gt (int .Values.indexingModel.replicaCount) 0) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "onyx.fullname" . }}-indexing-model
+  labels:
+    {{- include "onyx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: indexing-model
+spec:
+  type: {{ .Values.indexingModel.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.indexingModel.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "onyx.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: indexing-model
+{{- end }}

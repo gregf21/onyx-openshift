@@ -1,0 +1,51 @@
+
+=======================================================================
+  Onyx for OpenShift has been installed!
+=======================================================================
+
+{{- if .Values.vectorDB.enabled }}
+MODE: Full (RAG + document connectors enabled)
+
+IMPORTANT — Vespa requires the "anyuid" SCC:
+  Vespa's container image needs to run as a specific user which conflicts
+  with OpenShift's default restricted SCC. Ask your cluster admin to run:
+
+    oc adm policy add-scc-to-user anyuid \
+      -z {{ include "onyx.fullname" . }}-vespa \
+      -n {{ .Release.Namespace }}
+
+  This grants anyuid ONLY to the Vespa ServiceAccount in your namespace.
+  No cluster-wide privileges are needed. After granting:
+
+    kubectl delete pod -l app.kubernetes.io/component=vespa -n {{ .Release.Namespace }}
+
+  The pod will restart with the correct SCC.
+
+Components deployed:
+  - PostgreSQL (StatefulSet)
+  - Redis (StatefulSet)
+  - Vespa vector database (StatefulSet)
+  - API server (Deployment)
+  - Web server (Deployment)
+  - Inference model server (Deployment)
+  - Indexing model server (Deployment)
+  - Celery beat scheduler (Deployment)
+  - 7 Celery workers (Deployments)
+  - Nginx reverse proxy (Deployment)
+{{- else }}
+MODE: Lite (LLM chat only — no RAG or document connectors)
+
+Components deployed:
+  - PostgreSQL (StatefulSet)
+  - API server (Deployment)
+  - Web server (Deployment)
+  - Nginx reverse proxy (Deployment)
+{{- end }}
+
+Access Onyx:
+{{- if .Values.route.enabled }}
+  Route: https://{{ .Values.route.host | default (printf "%s-%s.apps.<cluster>" (include "onyx.fullname" .) .Release.Namespace) }}
+{{- else }}
+  Port-forward:  kubectl port-forward svc/{{ include "onyx.fullname" . }}-nginx {{ .Values.nginx.service.port }}:{{ .Values.nginx.service.port }} -n {{ .Release.Namespace }}
+  Then open:     http://localhost:{{ .Values.nginx.service.port }}
+{{- end }}

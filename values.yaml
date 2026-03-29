@@ -1,0 +1,363 @@
+# =============================================================================
+# ONYX OPENSHIFT — Full or Lite deployment for restricted OpenShift namespaces
+# =============================================================================
+# Designed for environments where you:
+#   - Have access to a single namespace only
+#   - Cannot create ClusterRole, ClusterRoleBinding, NetworkPolicy, or CRDs
+#   - Run on OpenShift with random UIDs (restricted SCC)
+#
+# Two modes:
+#   vectorDB.enabled: true   -> Full mode (RAG, document connectors, search)
+#   vectorDB.enabled: false  -> Lite mode (LLM chat only, PostgreSQL-backed)
+#
+# Usage:
+#   helm install onyx ./deployment/helm/charts/onyx-openshift
+#   helm install onyx ./deployment/helm/charts/onyx-openshift -f my-overrides.yaml
+# =============================================================================
+
+global:
+  # Image tag for all Onyx components (api, webserver, model-server, backend)
+  version: "latest"
+  pullPolicy: "IfNotPresent"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# =============================================================================
+# Master toggle — enables vector DB, model servers, and all celery workers
+# =============================================================================
+vectorDB:
+  enabled: true
+
+# =============================================================================
+# PostgreSQL — Simple StatefulSet (no operator, no CRDs)
+# =============================================================================
+postgresql:
+  image:
+    repository: registry.redhat.io/rhel9/postgresql-16
+    tag: "latest"
+  storage:
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# =============================================================================
+# Redis — Required when vectorDB is enabled (celery broker)
+# Uses Bitnami image which supports OpenShift arbitrary UIDs out of the box.
+# =============================================================================
+redis:
+  image:
+    repository: bitnami/redis
+    tag: "7.4"
+  storage:
+    size: 1Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# =============================================================================
+# Vespa — Vector database for RAG (only when vectorDB.enabled)
+#
+# IMPORTANT — OpenShift SCC requirement:
+#   Vespa's image expects to manage internal processes and may not start under
+#   the default "restricted" SCC. Ask your cluster admin to run:
+#
+#     oc adm policy add-scc-to-user anyuid \
+#       -z <release>-onyx-openshift-vespa -n <namespace>
+#
+#   This grants the "anyuid" SCC ONLY to the Vespa ServiceAccount in your
+#   namespace — no cluster-wide privileges needed.
+# =============================================================================
+vespa:
+  image:
+    repository: vespaengine/vespa
+    tag: "8.609.39"
+  storage:
+    size: 30Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 4000m
+      memory: 16Gi
+
+# =============================================================================
+# Inference Model Server — NLP tasks (reranking, intent classification)
+# Always deployed (needed for both lite and full modes).
+# =============================================================================
+inferenceModel:
+  replicaCount: 1
+  image:
+    repository: onyxdotapp/onyx-model-server
+    tag: ""  # defaults to global.version
+  containerPort: 9000
+  service:
+    type: ClusterIP
+    port: 9000
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+# =============================================================================
+# Indexing Model Server — Embedding generation (only when vectorDB.enabled)
+# =============================================================================
+indexingModel:
+  replicaCount: 1
+  image:
+    repository: onyxdotapp/onyx-model-server
+    tag: ""  # defaults to global.version
+  containerPort: 9000
+  limitConcurrency: 10
+  service:
+    type: ClusterIP
+    port: 9000
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 2Gi
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+
+# =============================================================================
+# API Server — Onyx backend (FastAPI + Alembic migrations)
+# =============================================================================
+api:
+  replicaCount: 1
+  image:
+    repository: onyxdotapp/onyx-backend
+    tag: ""
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 3Gi
+
+# =============================================================================
+# Web Server — Onyx frontend (Next.js)
+# =============================================================================
+webserver:
+  replicaCount: 1
+  image:
+    repository: onyxdotapp/onyx-web-server
+    tag: ""
+  containerPort: 3000
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# =============================================================================
+# Nginx — Lightweight reverse proxy (replaces ingress-nginx controller)
+# =============================================================================
+nginx:
+  image:
+    repository: nginxinc/nginx-unprivileged
+    tag: "1.27-alpine"
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  timeouts:
+    connect: 300
+    send: 300
+    read: 300
+
+# =============================================================================
+# OpenShift Route (optional)
+# =============================================================================
+route:
+  enabled: false
+  host: ""
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# =============================================================================
+# Celery Beat + Workers (only when vectorDB.enabled)
+#
+# The workers list drives a single consolidated template. Each entry becomes
+# a separate Deployment. Fields:
+#   name       — Deployment suffix and hostname prefix
+#   app        — Celery app module (onyx.background.celery.versioned_apps.<app>)
+#   queues     — Comma-separated queue names
+#   pool       — (optional) "threads" for I/O-bound workers; omit for default
+#   concurrency — (optional) --concurrency flag; omit for Celery default
+#   metricsPort — (optional) expose a metrics port on the container
+#   resources  — Kubernetes resource requests/limits
+# =============================================================================
+celery:
+  image:
+    repository: onyxdotapp/onyx-backend
+    tag: ""  # defaults to global.version
+
+  beat:
+    logLevel: INFO
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  workers:
+    - name: primary
+      app: primary
+      queues: "celery,periodic_tasks"
+      logLevel: INFO
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+
+    - name: light
+      app: light
+      queues: "vespa_metadata_sync,connector_deletion,doc_permissions_upsert,checkpoint_cleanup,index_attempt_cleanup,opensearch_migration"
+      logLevel: INFO
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+
+    - name: heavy
+      app: heavy
+      queues: "connector_pruning,connector_doc_permissions_sync,connector_external_group_sync,csv_generation,sandbox"
+      logLevel: INFO
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+
+    - name: docprocessing
+      app: docprocessing
+      queues: "docprocessing"
+      pool: threads
+      concurrency: 6
+      metricsPort: 9093
+      logLevel: INFO
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 4Gi
+
+    - name: docfetching
+      app: docfetching
+      queues: "connector_doc_fetching"
+      pool: threads
+      concurrency: 2
+      metricsPort: 9092
+      logLevel: INFO
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 4Gi
+
+    - name: monitoring
+      app: monitoring
+      queues: "monitoring"
+      metricsPort: 9096
+      logLevel: INFO
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+
+    - name: user-file-processing
+      app: user_file_processing
+      queues: "user_file_processing,user_file_project_sync,user_file_delete"
+      logLevel: INFO
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+
+# =============================================================================
+# Secrets
+# =============================================================================
+auth:
+  postgresql:
+    existingSecret: ""
+    username: "postgres"
+    password: "postgres"
+    database: "onyx"
+  redis:
+    existingSecret: ""
+    password: "password"
+
+# =============================================================================
+# Application configuration (injected as env vars via ConfigMap)
+# Values set here are added to the ConfigMap. Empty values are omitted.
+# When vectorDB.enabled=false, DISABLE_VECTOR_DB/CACHE_BACKEND/etc. are
+# automatically set to lite-mode defaults.
+# =============================================================================
+config:
+  AUTH_TYPE: "basic"
+  SESSION_EXPIRE_TIME_SECONDS: "86400"
+  WEB_DOMAIN: "http://localhost:3000"
+  DOMAIN: "localhost"
+  LOG_LEVEL: ""
+  DISABLE_TELEMETRY: ""
+  GEN_AI_MAX_TOKENS: ""
+  LLM_SOCKET_READ_TIMEOUT: "60"
+  # Add any additional environment variables here as key: value pairs.

@@ -1,0 +1,102 @@
+{{- if .Values.vectorDB.enabled }}
+{{- $root := . -}}
+{{- range .Values.celery.workers }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "onyx.fullname" $root }}-celery-{{ .name }}
+  labels:
+    {{- include "onyx.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: celery-{{ .name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "onyx.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: celery-{{ .name }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") $root | sha256sum }}
+      labels:
+        {{- include "onyx.selectorLabels" $root | nindent 8 }}
+        app.kubernetes.io/component: celery-{{ .name }}
+    spec:
+      {{- with $root.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "onyx.podSecurityContext" $root | nindent 8 }}
+      containers:
+        - name: celery-{{ .name }}
+          image: "{{ $root.Values.celery.image.repository }}:{{ $root.Values.celery.image.tag | default $root.Values.global.version }}"
+          imagePullPolicy: {{ $root.Values.global.pullPolicy }}
+          securityContext:
+            {{- include "onyx.containerSecurityContext" $root | nindent 12 }}
+          command:
+            - celery
+            - -A
+            - onyx.background.celery.versioned_apps.{{ .app }}
+            - worker
+            {{- if .pool }}
+            - --pool={{ .pool }}
+            {{- end }}
+            {{- if .concurrency }}
+            - --concurrency={{ .concurrency }}
+            - --prefetch-multiplier=1
+            {{- end }}
+            - --loglevel={{ .logLevel | default "INFO" }}
+            - --hostname={{ .name }}@%n
+            - -Q
+            - {{ .queues }}
+          {{- if .metricsPort }}
+          ports:
+            - name: metrics
+              containerPort: {{ .metricsPort }}
+              protocol: TCP
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "onyx.fullname" $root }}-env
+          env:
+            {{- include "onyx.backendEnv" $root | nindent 12 }}
+            {{- if eq .name "docprocessing" }}
+            - name: ENABLE_MULTIPASS_INDEXING
+              value: "false"
+            {{- end }}
+          startupProbe:
+            exec:
+              command:
+                - test
+                - -f
+                - /app/onyx/main.py
+            failureThreshold: 24
+            periodSeconds: 5
+            timeoutSeconds: 3
+          readinessProbe:
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 24
+            timeoutSeconds: 3
+            exec:
+              command:
+                - test
+                - -f
+                - /app/onyx/main.py
+          livenessProbe:
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            failureThreshold: 5
+            timeoutSeconds: 3
+            exec:
+              command:
+                - test
+                - -f
+                - /app/onyx/main.py
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,16 @@
+apiVersion: v2
+name: onyx-openshift
+description: >-
+  Lightweight Onyx deployment for OpenShift environments with limited
+  namespace-only privileges. Based on Onyx Lite mode — provides core LLM chat
+  functionality (conversations, tools, user file uploads, Projects, Agent
+  knowledge) without vector database or RAG search.
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://www.onyx.app/
+keywords:
+  - onyx
+  - openshift
+  - llm
+  - chat

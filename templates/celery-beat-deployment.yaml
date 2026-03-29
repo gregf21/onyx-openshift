@@ -1,0 +1,49 @@
+{{- if .Values.vectorDB.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "onyx.fullname" . }}-celery-beat
+  labels:
+    {{- include "onyx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "onyx.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-beat
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+      labels:
+        {{- include "onyx.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: celery-beat
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "onyx.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: celery-beat
+          image: "{{ .Values.celery.image.repository }}:{{ .Values.celery.image.tag | default .Values.global.version }}"
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          securityContext:
+            {{- include "onyx.containerSecurityContext" . | nindent 12 }}
+          command:
+            - celery
+            - -A
+            - onyx.background.celery.versioned_apps.beat
+            - beat
+            - --loglevel={{ .Values.celery.beat.logLevel }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "onyx.fullname" . }}-env
+          env:
+            {{- include "onyx.backendEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.celery.beat.resources | nindent 12 }}
+{{- end }}
