@@ -35,40 +35,38 @@ spec:
               containerPort: 5432
               protocol: TCP
           env:
-            - name: POSTGRES_USER
+            - name: POSTGRESQL_USER
               valueFrom:
                 secretKeyRef:
                   name: {{ include "onyx.pgSecretName" . }}
                   key: POSTGRES_USER
-            - name: POSTGRES_PASSWORD
+            - name: POSTGRESQL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "onyx.pgSecretName" . }}
                   key: POSTGRES_PASSWORD
-            - name: POSTGRES_DB
+            - name: POSTGRESQL_DATABASE
               valueFrom:
                 secretKeyRef:
                   name: {{ include "onyx.pgSecretName" . }}
                   key: POSTGRES_DB
+            - name: POSTGRESQL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "onyx.pgSecretName" . }}
+                  key: POSTGRES_PASSWORD
           readinessProbe:
             exec:
               command:
-                - pg_isready
-                - -U
-                - $(POSTGRES_USER)
-                - -d
-                - $(POSTGRES_DB)
+                - /usr/libexec/check-container
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5
           livenessProbe:
             exec:
               command:
-                - pg_isready
-                - -U
-                - $(POSTGRES_USER)
-                - -d
-                - $(POSTGRES_DB)
+                - /usr/libexec/check-container
+                - --live
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -76,7 +74,7 @@ spec:
             {{- toYaml .Values.postgresql.resources | nindent 12 }}
           volumeMounts:
             - name: data
-              mountPath: /bitnami/postgresql
+              mountPath: /var/lib/pgsql/data
   volumeClaimTemplates:
     - metadata:
         name: data
