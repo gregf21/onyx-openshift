@@ -24,12 +24,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "onyx.fullname" . }}-vespa
-      # Vespa requires anyuid SCC — the restricted SCC's runAsNonRoot will
-      # block the container. The dedicated ServiceAccount above should be
-      # granted the anyuid SCC by a cluster admin.
       securityContext:
-        runAsUser: 0
-        runAsGroup: 0
+        runAsNonRoot: true
       containers:
         - name: vespa
           image: "{{ .Values.vespa.image.repository }}:{{ .Values.vespa.image.tag }}"

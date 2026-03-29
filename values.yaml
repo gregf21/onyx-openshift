@@ -70,19 +70,16 @@ redis:
 # =============================================================================
 # Vespa — Vector database for RAG (only when vectorDB.enabled)
 #
-# IMPORTANT — OpenShift SCC requirement:
-#   Vespa's image expects to manage internal processes and may not start under
-#   the default "restricted" SCC. Ask your cluster admin to run:
+# Uses a custom non-root image built from docker/vespa/Dockerfile so that
+# no anyuid SCC is required. Build and push the image, then set the
+# repository below to your registry:
 #
-#     oc adm policy add-scc-to-user anyuid \
-#       -z <release>-onyx-openshift-vespa -n <namespace>
-#
-#   This grants the "anyuid" SCC ONLY to the Vespa ServiceAccount in your
-#   namespace — no cluster-wide privileges needed.
+#   docker build -t <registry>/vespa-nonroot:8.609.39 docker/vespa/
+#   docker push <registry>/vespa-nonroot:8.609.39
 # =============================================================================
 vespa:
   image:
-    repository: vespaengine/vespa
+    repository: vespa-nonroot
     tag: "8.609.39"
   storage:
     size: 30Gi
