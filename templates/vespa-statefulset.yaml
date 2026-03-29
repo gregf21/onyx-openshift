@@ -68,6 +68,11 @@ spec:
           volumeMounts:
             - name: vespa-storage
               mountPath: /opt/vespa/var
+            - name: vespa-logs
+              mountPath: /opt/vespa/logs
+      volumes:
+        - name: vespa-logs
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: vespa-storage
