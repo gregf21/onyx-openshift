@@ -4,13 +4,7 @@ A self-contained Helm chart for deploying [Onyx](https://www.onyx.app/) to OpenS
 
 ## Why This Chart Exists
 
-The [upstream Onyx Helm chart](https://github.com/onyx-dot-app/onyx/tree/main/deployment/helm/charts/onyx) bundles 7 subcharts (CloudNativePG, Vespa, OpenSearch, ingress-nginx, Redis operator, MinIO, code-interpreter), several of which require CRDs or cluster-scoped RBAC. This chart replaces all of that with plain Kubernetes resources that fit inside a single namespace.
-
-**Constraints this chart is built for:**
-
-- Single namespace access only
-- Cannot create ClusterRole, ClusterRoleBinding, NetworkPolicy, or CRDs
-- OpenShift with random UIDs (restricted SCC)
+The [upstream Onyx Helm chart](https://github.com/onyx-dot-app/onyx/tree/main/deployment/helm/charts/onyx) bundles 7 subcharts (CloudNativePG, Vespa, OpenSearch, ingress-nginx, Redis operator, MinIO, code-interpreter), several of which require CRDs or cluster-scoped RBAC. This chart replaces all of that with plain Kubernetes resources that fit inside a single namespace and work without needing to be a cluster administrator.
 
 ## Deployment Modes
 
